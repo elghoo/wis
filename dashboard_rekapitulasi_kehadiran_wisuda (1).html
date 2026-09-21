@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Rekapitulasi Kehadiran Wisuda</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for UI Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .gradient-card {
+            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+        }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 relative">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Custom Alert/Info Modal (Replacing native alert) -->
+    <div id="modalAlert" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-slide-in">
+            <div class="flex items-start space-x-3">
+                <div id="modalAlertIcon" class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-lg">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 id="modalAlertTitle" class="text-base font-bold text-slate-900">Pemberitahuan</h3>
+                    <p id="modalAlertMessage" class="text-xs text-slate-600 mt-1 whitespace-pre-line leading-relaxed"></p>
+                </div>
+            </div>
+            <div class="mt-5 flex justify-end">
+                <button id="btnCloseAlert" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition">
+                    Mengerti
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <header class="sticky top-0 z-30 glass-header border-b border-slate-200/80 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                    <i class="fa-solid font-bold fa-graduation-cap text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 leading-tight">Rekapitulasi Kehadiran Wisuda</h1>
+                    <p class="text-xs text-slate-500">Sistem Monitoring & Analytics Spreadsheet Responses</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button id="btnGasModal" class="px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all border border-indigo-200 flex items-center space-x-2">
+                    <i class="fa-solid fa-code"></i>
+                    <span class="hidden sm:inline">Setup Google Script</span>
+                </button>
+                <button id="btnExportCsv" class="px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all border border-emerald-200 flex items-center space-x-2">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span class="hidden sm:inline">Export Excel/CSV</span>
+                </button>
+                <button id="btnRefresh" class="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate" id="refreshIcon"></i>
+                    <span>Refresh Data</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <div id="statusBanner" class="p-3.5 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center space-x-2">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span>Mode Data: <strong id="dataModeText" class="text-slate-800">Demo / Data Simulasi</strong></span>
+                <span class="text-slate-300">|</span>
+                <span id="lastUpdatedText">Terakhir diperbarui: -</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <input type="text" id="gasUrlInput" placeholder="Masukkan Web App URL GAS disini..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <button id="btnConnectGas" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg text-xs transition">Hubungkan</button>
+            </div>
+        </div>
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Total Respon -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Form Respon</p>
+                        <h3 class="text-2xl font-bold text-slate-900 mt-1" id="statTotalResponses">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-slate-500">
+                    <span id="statSubResponses" class="font-medium text-slate-700">0 Total Entri</span>
+                </div>
+            </div>
+
+            <!-- Total Wisudawan (Laki-laki) -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Wisudawan (Laki-laki)</p>
+                        <h3 class="text-2xl font-bold text-blue-600 mt-1" id="statWisudawan">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
+                    <span>Hadir: <strong id="statWisudawanHadir" class="text-emerald-600">0</strong></span>
+                    <span>Tdk Hadir: <strong id="statWisudawanAbsen" class="text-rose-600">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Total Wisudawati (Perempuan) -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Wisudawati (Perempuan)</p>
+                        <h3 class="text-2xl font-bold text-pink-600 mt-1" id="statWisudawati">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
+                    <span>Hadir: <strong id="statWisudawatiHadir" class="text-emerald-600">0</strong></span>
+                    <span>Tdk Hadir: <strong id="statWisudawatiAbsen" class="text-rose-600">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Total Wali / Orang Tua -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Wali Hadir</p>
+                        <h3 class="text-2xl font-bold text-amber-600 mt-1" id="statTotalWali">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
+                    <span>Laki-laki: <strong id="statWaliLaki" class="text-blue-600">0</strong></span>
+                    <span>Perempuan: <strong id="statWaliPerempuan" class="text-pink-600">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Total Pengunjung Main Hall -->
+            <div class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-medium text-indigo-100 uppercase tracking-wider">Estimasi Hadir Fisik</p>
+                        <h3 class="text-2xl font-bold text-white mt-1" id="statTotalPengunjung">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center text-base backdrop-blur-xs">
+                        <i class="fa-solid fa-building-user"></i>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center text-xs text-indigo-100 justify-between">
+                    <span>Tingkat Kehadiran:</span>
+                    <strong id="statAttendanceRate" class="text-white bg-white/20 px-2 py-0.5 rounded text-xs">0%</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Chart 1: Perbandingan Kehadiran Wisudawan/ti -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+                        <span>Kehadiran per Gender</span>
+                    </h2>
+                </div>
+                <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
+                    <canvas id="chartGenderAttendance"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Kehadiran Wali / Orang Tua -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-bar text-amber-600"></i>
+                        <span>Status Kehadiran Wali</span>
+                    </h2>
+                </div>
+                <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
+                    <canvas id="chartWaliStatus"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 3: Top Asal Provinsi Wisudawan/ti -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-map-location-dot text-emerald-600"></i>
+                        <span>Top 5 Demografi Provinsi</span>
+                    </h2>
+                </div>
+                <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
+                    <canvas id="chartProvince"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <!-- Filter Bar -->
+            <div class="p-5 border-b border-slate-100 space-y-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Data Detail Rekapitulasi</h2>
+                        <p class="text-xs text-slate-500">Daftar lengkap pendaftar wisuda beserta wali dan status kehadiran</p>
+                    </div>
+                    <div class="flex items-center space-x-2 w-full sm:w-auto">
+                        <span id="tableRecordCount" class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg font-medium">0 Data Ditampilkan</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchInput" placeholder="Cari nama, WhatsApp, email, ID..." class="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+                    </div>
+
+                    <!-- Gender Filter -->
+                    <div>
+                        <select id="filterGender" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
+                            <option value="ALL">Semua Jenis Kelamin</option>
+                            <option value="Laki-laki">Wisudawan (Laki-laki)</option>
+                            <option value="Perempuan">Wisudawati (Perempuan)</option>
+                        </select>
+                    </div>
+
+                    <!-- Wisudawan Attendance Filter -->
+                    <div>
+                        <select id="filterAttendance" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
+                            <option value="ALL">Semua Kehadiran Wisudawan/i</option>
+                            <option value="Hadir">Hadir</option>
+                            <option value="Tidak Hadir">Tidak Hadir</option>
+                        </select>
+                    </div>
+
+                    <!-- Wali Attendance Filter -->
+                    <div>
+                        <select id="filterWaliAttendance" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
+                            <option value="ALL">Semua Kehadiran Wali</option>
+                            <option value="Hadir">Ada Wali Hadir</option>
+                            <option value="Tidak Hadir">Tanpa Wali</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider">
+                            <th class="py-3.5 px-4">Wisudawan/i</th>
+                            <th class="py-3.5 px-4">Gender</th>
+                            <th class="py-3.5 px-4">Asal Daerah</th>
+                            <th class="py-3.5 px-4 text-center">Kehadiran</th>
+                            <th class="py-3.5 px-4 text-center">Kehadiran Wali</th>
+                            <th class="py-3.5 px-4">Rincian Wali</th>
+                            <th class="py-3.5 px-4">Kontak</th>
+                            <th class="py-3.5 px-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700">
+                        <!-- Dynamic Row Content -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Pagination -->
+            <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+                <div id="paginationInfo">Menampilkan 0 - 0 dari 0 entri</div>
+                <div class="flex items-center space-x-1" id="paginationButtons">
+                    <!-- Dynamic Buttons -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal Detail Participant -->
+    <div id="modalDetail" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start border-b border-slate-100 pb-4">
+                <div>
+                    <span id="mdlDocId" class="text-[10px] font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded uppercase font-semibold">DOC-00000</span>
+                    <h3 id="mdlName" class="text-lg font-bold text-slate-900 mt-1">Nama Lengkap</h3>
+                    <p id="mdlTimestamp" class="text-xs text-slate-400">Timestamp: -</p>
+                </div>
+                <button id="btnCloseDetail" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-4 text-xs">
+                <!-- Status Row -->
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                    <div>
+                        <span class="text-slate-400 block text-[11px]">Kehadiran Wisudawan/i:</span>
+                        <span id="mdlWisudawanStatus" class="font-semibold text-slate-800 text-sm">-</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block text-[11px]">Kehadiran Wali/Orang Tua:</span>
+                        <span id="mdlWaliStatus" class="font-semibold text-slate-800 text-sm">-</span>
+                    </div>
+                </div>
+
+                <!-- Info Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Biodata Wisudawan/i</p>
+                        <ul class="space-y-1.5 text-slate-600">
+                            <li><span class="text-slate-400">Jenis Kelamin:</span> <span id="mdlGender" class="font-medium">-</span></li>
+                            <li><span class="text-slate-400">Kota Asal:</span> <span id="mdlCity" class="font-medium">-</span></li>
+                            <li><span class="text-slate-400">Provinsi Asal:</span> <span id="mdlProvince" class="font-medium">-</span></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Informasi Kontak</p>
+                        <ul class="space-y-1.5 text-slate-600">
+                            <li><span class="text-slate-400">No. WhatsApp:</span> <a id="mdlWa" href="#" target="_blank" class="text-indigo-600 hover:underline font-medium">-</a></li>
+                            <li><span class="text-slate-400">Email Address:</span> <span id="mdlEmail" class="font-medium">-</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Detail Wali -->
+                <div>
+                    <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Data Wali / Pendamping Yang Hadir</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
+                            <span class="font-bold text-amber-800 block mb-1">Wali Pertama (1)</span>
+                            <p class="text-slate-700">Nama: <strong id="mdlWali1Name">-</strong></p>
+                            <p class="text-slate-600">Hubungan: <span id="mdlWali1Relation">-</span></p>
+                        </div>
+                        <div class="p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
+                            <span class="font-bold text-amber-800 block mb-1">Wali Kedua (2)</span>
+                            <p class="text-slate-700">Nama: <strong id="mdlWali2Name">-</strong></p>
+                            <p class="text-slate-600">Hubungan: <span id="mdlWali2Relation">-</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="btnCloseDetail2" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Google Apps Script Generator -->
+    <div id="modalGas" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-code text-indigo-600 text-lg"></i>
+                    <h3 class="text-base font-bold text-slate-900">Panduan & Code Google Apps Script (GAS)</h3>
+                </div>
+                <button id="btnCloseGas" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-4 text-xs text-slate-600">
+                <p>Salin kode Apps Script di bawah ini ke Spreadsheet Anda (menu <strong>Ekstensi &gt; Apps Script</strong>) untuk menghubungkan formulir Spreadsheet secara live dengan Dashboard ini.</p>
+                
+                <ol class="list-decimal pl-4 space-y-1 text-slate-700 font-medium">
+                    <li>Buka Google Sheets respon formulir wisuda Anda.</li>
+                    <li>Klik <strong>Ekstensi &gt; Apps Script</strong>.</li>
+                    <li>Hapus semua kode di editor `Code.gs` dan tempelkan skrip berikut.</li>
+                    <li>Klik <strong>Terapkan (Deploy) &gt; Terapkan sebagai Web App</strong>.</li>
+                    <li>Atur <em>Who has access</em> / <em>Siapa yang memiliki akses</em> menjadi: <strong>Anyone / Siapa Saja</strong>.</li>
+                    <li>Salin Web App URL dan tempelkan di kotak input Web App URL pada bagian atas dashboard.</li>
+                </ol>
+
+                <div class="relative">
+                    <button id="btnCopyCode" class="absolute right-3 top-3 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-semibold transition">
+                        <i class="fa-solid fa-copy mr-1"></i>Salin Kode
+                    </button>
+                    <pre class="bg-slate-900 text-indigo-200 p-4 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed border border-slate-800" id="gasCodeBlock">
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  
+  var result = [];
+  if (data.length > 1) {
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      if(!row[0] && !row[3]) continue; // Skip empty rows
+      
+      var item = {
+        timestamp: row[0] ? String(row[0]) : '',
+        wa: row[1] ? String(row[1]) : '',
+        gender: row[2] ? String(row[2]) : '',
+        fullName: row[3] ? String(row[3]) : '',
+        city: row[4] ? String(row[4]) : '',
+        province: row[5] ? String(row[5]) : '',
+        wisudawanAttendance: row[6] ? String(row[6]) : '',
+        waliAttendance: row[7] ? String(row[7]) : '',
+        wali1Name: row[8] ? String(row[8]) : '',
+        wali1Relation: row[9] ? String(row[9]) : '',
+        wali2Name: row[10] ? String(row[10]) : '',
+        wali2Relation: row[11] ? String(row[11]) : '',
+        email: row[12] ? String(row[12]) : '',
+        docId: row[13] ? String(row[13]) : ('DOC-' + (1000 + i))
+      };
+      result.push(item);
+    }
+  }
+  
+  var jsonOutput = JSON.stringify(result);
+  
+  // JSONP support to bypass CORS in iframe/blob origins
+  if (e && e.parameter && e.parameter.callback) {
+    return ContentService.createTextOutput(e.parameter.callback + '(' + jsonOutput + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  
+  return ContentService.createTextOutput(jsonOutput)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+</pre>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button id="btnCloseGas2" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-xs">Selesai</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toast Notification System (Replacing native alert)
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center space-x-2 px-4 py-3 rounded-xl shadow-lg text-xs font-medium text-white transition-all transform animate-slide-in ${
+                type === 'success' ? 'bg-emerald-600' :
+                type === 'error' ? 'bg-rose-600' :
+                type === 'warning' ? 'bg-amber-600' : 'bg-slate-800'
+            }`;
+
+            const iconMap = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-xmark',
+                warning: 'fa-triangle-exclamation',
+                info: 'fa-circle-info'
+            };
+
+            toast.innerHTML = `<i class="fa-solid ${iconMap[type] || 'fa-circle-info'} text-sm"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Custom Modal Alert Dialog
+        function showAlertModal(title, message, isError = false) {
+            const modal = document.getElementById('modalAlert');
+            const icon = document.getElementById('modalAlertIcon');
+            const titleElem = document.getElementById('modalAlertTitle');
+            const msgElem = document.getElementById('modalAlertMessage');
+
+            titleElem.innerText = title;
+            msgElem.innerText = message;
+
+            if (isError) {
+                icon.className = "w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 text-lg";
+                icon.innerHTML = `<i class="fa-solid fa-circle-xmark"></i>`;
+            } else {
+                icon.className = "w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-lg";
+                icon.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        // Global State
+        let rawData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const pageSize = 8;
+        let chartGender = null;
+        let chartWali = null;
+        let chartProv = null;
+
+        // Helper function to classify Wali gender from relation string
+        function classifyWaliGender(relation) {
+            if (!relation || !relation.trim()) return null;
+            const rel = relation.toLowerCase().trim();
+            if (rel.includes('ayah') || rel.includes('suami') || rel.includes('paman') || rel.includes('kakek') || rel.includes('laki')) {
+                return 'Laki-laki';
+            } else if (rel.includes('ibu') || rel.includes('istri') || rel.includes('bibi') || rel.includes('nenek') || rel.includes('perempuan')) {
+                return 'Perempuan';
+            }
+            return 'Laki-laki'; // default fallback if non-standard string is provided
+        }
+
+        // Realistic Mock Generator
+        function generateMockData() {
+            const firstNames = ["Ahmad", "Budi", "Chandra", "Dewi", "Eka", "Fajar", "Gita", "Hadi", "Indah", "Joko", "Kartika", "Lestari", "Muhammad", "Nia", "Oki", "Putri", "Rian", "Siti", "Taufik", "Utami", "Vina", "Wahyu", "Yusuf", "Zahra"];
+            const lastNames = ["Pratama", "Wijaya", "Kusuma", "Santoso", "Saputra", "Utomo", "Nugroho", "Setiawan", "Hidayat", "Laksana", "Permana", "Suryani", "Wibowo", "Ramadhan"];
+            const cities = [
+                { city: "Bandung", prov: "Jawa Barat" },
+                { city: "Sukabumi", prov: "Jawa Barat" },
+                { city: "Bogor", prov: "Jawa Barat" },
+                { city: "Jakarta Selatan", prov: "DKI Jakarta" },
+                { city: "Jakarta Barat", prov: "DKI Jakarta" },
+                { city: "Semarang", prov: "Jawa Tengah" },
+                { city: "Surakarta", prov: "Jawa Tengah" },
+                { city: "Surabaya", prov: "Jawa Timur" },
+                { city: "Malang", prov: "Jawa Timur" },
+                { city: "Yogyakarta", prov: "DI Yogyakarta" },
+                { city: "Medan", prov: "Sumatera Utara" },
+                { city: "Padang", prov: "Sumatera Barat" }
+            ];
+
+            const mockList = [];
+            const count = 48;
+
+            for (let i = 1; i <= count; i++) {
+                const isMale = Math.random() > 0.52;
+                const gender = isMale ? "Laki-laki" : "Perempuan";
+                const fname = firstNames[Math.floor(Math.random() * firstNames.length)];
+                const lname = lastNames[Math.floor(Math.random() * lastNames.length)];
+                const fullName = `${fname} ${lname}`;
+                
+                const loc = cities[Math.floor(Math.random() * cities.length)];
+                const wisudawanAttendance = Math.random() > 0.12 ? "Hadir" : "Tidak Hadir";
+                
+                let waliAttendance = "Tidak Hadir";
+                let wali1Name = "";
+                let wali1Relation = "";
+                let wali2Name = "";
+                let wali2Relation = "";
+
+                if (wisudawanAttendance === "Hadir") {
+                    const waliRand = Math.random();
+                    if (waliRand > 0.15) {
+                        waliAttendance = "Hadir";
+                        const w1First = firstNames[Math.floor(Math.random() * firstNames.length)];
+                        wali1Name = `${w1First} ${lname}`;
+                        wali1Relation = Math.random() > 0.5 ? "Ayah" : "Ibu";
+
+                        if (Math.random() > 0.4) {
+                            const w2First = firstNames[Math.floor(Math.random() * firstNames.length)];
+                            wali2Name = `${w2First} ${lname}`;
+                            wali2Relation = wali1Relation === "Ayah" ? "Ibu" : "Ayah";
+                        }
+                    }
+                }
+
+                mockList.push({
+                    timestamp: new Date(Date.now() - Math.floor(Math.random() * 864000000)).toLocaleString('id-ID'),
+                    wa: `08${Math.floor(100000000 + Math.random() * 900000000)}`,
+                    gender: gender,
+                    fullName: fullName,
+                    city: loc.city,
+                    province: loc.prov,
+                    wisudawanAttendance: wisudawanAttendance,
+                    waliAttendance: waliAttendance,
+                    wali1Name: wali1Name,
+                    wali1Relation: wali1Relation,
+                    wali2Name: wali2Name,
+                    wali2Relation: wali2Relation,
+                    email: `${fname.toLowerCase()}.${lname.toLowerCase()}@gmail.com`,
+                    docId: `DOC-${202600 + i}`
+                });
+            }
+            return mockList;
+        }
+
+        function calculateStats(data) {
+            let wisudawanHadir = 0;
+            let wisudawanAbsen = 0;
+            let wisudawatiHadir = 0;
+            let wisudawatiAbsen = 0;
+            
+            let totalWaliLaki = 0;
+            let totalWaliPerempuan = 0;
+
+            data.forEach(item => {
+                const g = (item.gender || '').toLowerCase().trim();
+                const isMale = g.includes('laki') || g.includes('pria') || g.includes('male');
+                const isHadir = (item.wisudawanAttendance || '').trim().toLowerCase() === "hadir";
+
+                if (isMale) {
+                    if (isHadir) wisudawanHadir++;
+                    else wisudawanAbsen++;
+                } else {
+                    if (isHadir) wisudawatiHadir++;
+                    else wisudawatiAbsen++;
+                }
+
+                // Hitung kehadiran Wali 1 berdasarkan terisinya kolom hubungan
+                if (item.wali1Relation && item.wali1Relation.trim() !== '') {
+                    const g1 = classifyWaliGender(item.wali1Relation);
+                    if (g1 === 'Laki-laki') totalWaliLaki++;
+                    else if (g1 === 'Perempuan') totalWaliPerempuan++;
+                }
+
+                // Hitung kehadiran Wali 2 berdasarkan terisinya kolom hubungan
+                if (item.wali2Relation && item.wali2Relation.trim() !== '') {
+                    const g2 = classifyWaliGender(item.wali2Relation);
+                    if (g2 === 'Laki-laki') totalWaliLaki++;
+                    else if (g2 === 'Perempuan') totalWaliPerempuan++;
+                }
+            });
+
+            const totalResponses = data.length;
+            const totalWisudawan = wisudawanHadir + wisudawanAbsen;
+            const totalWisudawati = wisudawatiHadir + wisudawatiAbsen;
+            const totalHadirWisuda = wisudawanHadir + wisudawatiHadir;
+            const totalWaliCount = totalWaliLaki + totalWaliPerempuan;
+            const totalPengunjung = totalHadirWisuda + totalWaliCount;
+            const attendanceRate = totalResponses > 0 ? ((totalHadirWisuda / totalResponses) * 100).toFixed(1) : 0;
+
+            // Update UI elements
+            document.getElementById('statTotalResponses').innerText = totalResponses;
+            document.getElementById('statSubResponses').innerText = `${totalHadirWisuda} Hadir • ${totalResponses - totalHadirWisuda} Absen`;
+            
+            document.getElementById('statWisudawan').innerText = totalWisudawan;
+            document.getElementById('statWisudawanHadir').innerText = wisudawanHadir;
+            document.getElementById('statWisudawanAbsen').innerText = wisudawanAbsen;
+
+            document.getElementById('statWisudawati').innerText = totalWisudawati;
+            document.getElementById('statWisudawatiHadir').innerText = wisudawatiHadir;
+            document.getElementById('statWisudawatiAbsen').innerText = wisudawatiAbsen;
+
+            document.getElementById('statTotalWali').innerText = totalWaliCount;
+            document.getElementById('statWaliLaki').innerText = totalWaliLaki;
+            document.getElementById('statWaliPerempuan').innerText = totalWaliPerempuan;
+
+            document.getElementById('statTotalPengunjung').innerText = totalPengunjung;
+            document.getElementById('statAttendanceRate').innerText = `${attendanceRate}%`;
+        }
+
+        function updateCharts(data) {
+            // Chart 1: Kehadiran Wisudawan (Laki-laki) vs Wisudawati (Perempuan)
+            let maleHadir = 0, maleAbsen = 0, femaleHadir = 0, femaleAbsen = 0;
+            data.forEach(d => {
+                const g = (d.gender || '').toLowerCase().trim();
+                const isMale = g.includes('laki') || g.includes('pria') || g.includes('male');
+                const isHadir = (d.wisudawanAttendance || '').trim().toLowerCase() === "hadir";
+
+                if (isMale) {
+                    if (isHadir) maleHadir++;
+                    else maleAbsen++;
+                } else {
+                    if (isHadir) femaleHadir++;
+                    else femaleAbsen++;
+                }
+            });
+
+            const ctxGender = document.getElementById('chartGenderAttendance').getContext('2d');
+            if (chartGender) chartGender.destroy();
+            chartGender = new Chart(ctxGender, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Laki-laki (Hadir)', 'Laki-laki (Absen)', 'Perempuan (Hadir)', 'Perempuan (Absen)'],
+                    datasets: [{
+                        data: [maleHadir, maleAbsen, femaleHadir, femaleAbsen],
+                        backgroundColor: ['#2563eb', '#93c5fd', '#db2777', '#fbcfe8'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // Chart 2: Status & Komposisi Wali (Laki-laki vs Perempuan)
+            let waliLakiCount = 0;
+            let waliPerempuanCount = 0;
+            
+            data.forEach(d => {
+                if (d.wali1Relation && d.wali1Relation.trim() !== '') {
+                    const g1 = classifyWaliGender(d.wali1Relation);
+                    if (g1 === 'Laki-laki') waliLakiCount++;
+                    else if (g1 === 'Perempuan') waliPerempuanCount++;
+                }
+                if (d.wali2Relation && d.wali2Relation.trim() !== '') {
+                    const g2 = classifyWaliGender(d.wali2Relation);
+                    if (g2 === 'Laki-laki') waliLakiCount++;
+                    else if (g2 === 'Perempuan') waliPerempuanCount++;
+                }
+            });
+
+            const ctxWali = document.getElementById('chartWaliStatus').getContext('2d');
+            if (chartWali) chartWali.destroy();
+            chartWali = new Chart(ctxWali, {
+                type: 'bar',
+                data: {
+                    labels: ['Wali Laki-laki', 'Wali Perempuan'],
+                    datasets: [{
+                        label: 'Jumlah Wali Hadir',
+                        data: [waliLakiCount, waliPerempuanCount],
+                        backgroundColor: ['#3b82f6', '#ec4899'],
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: ['#2563eb', '#db2777']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+                }
+            });
+
+            // Chart 3: Top Provinces
+            const provMap = {};
+            data.forEach(d => {
+                const prov = d.province || 'Lainnya';
+                provMap[prov] = (provMap[prov] || 0) + 1;
+            });
+            const sortedProvs = Object.entries(provMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+            const ctxProv = document.getElementById('chartProvince').getContext('2d');
+            if (chartProv) chartProv.destroy();
+            chartProv = new Chart(ctxProv, {
+                type: 'bar',
+                data: {
+                    labels: sortedProvs.map(item => item[0]),
+                    datasets: [{
+                        label: 'Wisudawan/i',
+                        data: sortedProvs.map(item => item[1]),
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } }
+                }
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const total = filteredData.length;
+            document.getElementById('tableRecordCount').innerText = `${total} Data Ditampilkan`;
+
+            if (total === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-8 text-slate-400 font-medium">
+                            <i class="fa-solid fa-folder-open text-2xl block mb-2"></i>
+                            Tidak ada data yang sesuai dengan filter.
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('paginationInfo').innerText = 'Menampilkan 0 - 0 dari 0 entri';
+                document.getElementById('paginationButtons').innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.ceil(total / pageSize);
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, total);
+            const pageData = filteredData.slice(startIndex, endIndex);
+
+            pageData.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition border-b border-slate-100";
+
+                const g = (item.gender || '').toLowerCase().trim();
+                const isMale = g.includes('laki') || g.includes('pria') || g.includes('male');
+
+                const genderBadge = isMale
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200"><i class="fa-solid fa-mars mr-1"></i>Wisudawan</span>`
+                    : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-pink-50 text-pink-700 border border-pink-200"><i class="fa-solid fa-venus mr-1"></i>Wisudawati</span>`;
+
+                const wisudawanStatusBadge = (item.wisudawanAttendance || '').trim().toLowerCase() === "hadir"
+                    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-circle-check mr-1.5"></i>Hadir</span>`
+                    : `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"><i class="fa-solid fa-circle-xmark mr-1.5"></i>Tidak Hadir</span>`;
+
+                const waliStatusBadge = (item.waliAttendance || '').trim().toLowerCase() === "hadir"
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"><i class="fa-solid fa-users mr-1"></i>Hadir</span>`
+                    : `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500">Absen</span>`;
+
+                let waliDetailStr = "-";
+                if (item.waliAttendance === "Hadir") {
+                    const w1 = item.wali1Name ? `${item.wali1Name} (${item.wali1Relation || 'Wali'})` : '';
+                    const w2 = item.wali2Name ? `, ${item.wali2Name} (${item.wali2Relation || 'Wali'})` : '';
+                    waliDetailStr = `<span class="truncate max-w-[180px] block" title="${w1}${w2}">${w1}${w2}</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-slate-900">${item.fullName || 'Tanpa Nama'}</div>
+                        <div class="text-[10px] font-mono text-slate-400">${item.docId || '-'}</div>
+                    </td>
+                    <td class="py-3 px-4">${genderBadge}</td>
+                    <td class="py-3 px-4">
+                        <div class="font-medium text-slate-800">${item.city || '-'}</div>
+                        <div class="text-[10px] text-slate-400">${item.province || '-'}</div>
+                    </td>
+                    <td class="py-3 px-4 text-center">${wisudawanStatusBadge}</td>
+                    <td class="py-3 px-4 text-center">${waliStatusBadge}</td>
+                    <td class="py-3 px-4 text-slate-600">${waliDetailStr}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex items-center space-x-2">
+                            ${item.wa ? `<a href="https://wa.me/${item.wa.replace(/[^0-9]/g, '')}" target="_blank" class="text-emerald-600 hover:text-emerald-700 font-mono"><i class="fa-brands fa-whatsapp text-sm"></i></a>` : ''}
+                            <span class="text-slate-500 text-[11px] truncate max-w-[120px]" title="${item.email}">${item.email || '-'}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <button onclick="openDetailModal(${startIndex + idx})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold transition">
+                            Detail
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Pagination Controls
+            document.getElementById('paginationInfo').innerText = `Menampilkan ${startIndex + 1} - ${endIndex} dari ${total} entri`;
+            
+            const btnContainer = document.getElementById('paginationButtons');
+            btnContainer.innerHTML = '';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `px-2.5 py-1 rounded-lg text-xs font-semibold ${currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`;
+            prevBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => { currentPage--; renderTable(); };
+            btnContainer.appendChild(prevBtn);
+
+            for (let p = 1; p <= totalPages; p++) {
+                if (totalPages > 6 && Math.abs(p - currentPage) > 2 && p !== 1 && p !== totalPages) continue;
+                const pBtn = document.createElement('button');
+                pBtn.className = `px-3 py-1 rounded-lg text-xs font-semibold ${p === currentPage ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'}`;
+                pBtn.innerText = p;
+                pBtn.onclick = () => { currentPage = p; renderTable(); };
+                btnContainer.appendChild(pBtn);
+            }
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `px-2.5 py-1 rounded-lg text-xs font-semibold ${currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`;
+            nextBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => { currentPage++; renderTable(); };
+            btnContainer.appendChild(nextBtn);
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
+            const gender = document.getElementById('filterGender').value;
+            const attendance = document.getElementById('filterAttendance').value;
+            const waliAttendance = document.getElementById('filterWaliAttendance').value;
+
+            filteredData = rawData.filter(item => {
+                // Search match
+                const matchSearch = !search || 
+                    (item.fullName && item.fullName.toLowerCase().includes(search)) ||
+                    (item.wa && item.wa.includes(search)) ||
+                    (item.email && item.email.toLowerCase().includes(search)) ||
+                    (item.docId && item.docId.toLowerCase().includes(search)) ||
+                    (item.city && item.city.toLowerCase().includes(search)) ||
+                    (item.province && item.province.toLowerCase().includes(search));
+
+                // Gender match (flexible check)
+                const g = (item.gender || '').toLowerCase().trim();
+                const isMale = g.includes('laki') || g.includes('pria') || g.includes('male');
+                const matchGender = gender === "ALL" || 
+                    (gender === "Laki-laki" && isMale) || 
+                    (gender === "Perempuan" && !isMale);
+
+                // Wisudawan Attendance match
+                const itemAtt = (item.wisudawanAttendance || '').trim();
+                const matchAttendance = attendance === "ALL" || 
+                    (attendance === "Hadir" && itemAtt.toLowerCase() === "hadir") ||
+                    (attendance === "Tidak Hadir" && itemAtt.toLowerCase() !== "hadir");
+
+                // Wali Attendance match
+                const itemWaliAtt = (item.waliAttendance || '').trim();
+                const matchWaliAttendance = waliAttendance === "ALL" || 
+                    (waliAttendance === "Hadir" && itemWaliAtt.toLowerCase() === "hadir") ||
+                    (waliAttendance === "Tidak Hadir" && itemWaliAtt.toLowerCase() !== "hadir");
+
+                return matchSearch && matchGender && matchAttendance && matchWaliAttendance;
+            });
+
+            currentPage = 1;
+            calculateStats(filteredData);
+            updateCharts(filteredData);
+            renderTable();
+        }
+
+        window.openDetailModal = function(index) {
+            const item = filteredData[index];
+            if (!item) return;
+
+            document.getElementById('mdlDocId').innerText = item.docId || 'DOC-UNASSIGNED';
+            document.getElementById('mdlName').innerText = item.fullName || 'Tanpa Nama';
+            document.getElementById('mdlTimestamp').innerText = `Timestamp Respon: ${item.timestamp || '-'}`;
+            
+            document.getElementById('mdlWisudawanStatus').innerHTML = item.wisudawanAttendance === "Hadir"
+                ? `<span class="text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>Hadir</span>`
+                : `<span class="text-rose-600"><i class="fa-solid fa-circle-xmark mr-1"></i>Tidak Hadir</span>`;
+
+            document.getElementById('mdlWaliStatus').innerHTML = item.waliAttendance === "Hadir"
+                ? `<span class="text-amber-600"><i class="fa-solid fa-users mr-1"></i>Wali Hadir</span>`
+                : `<span class="text-slate-500">Wali Tidak Hadir</span>`;
+
+            document.getElementById('mdlGender').innerText = item.gender || '-';
+            document.getElementById('mdlCity').innerText = item.city || '-';
+            document.getElementById('mdlProvince').innerText = item.province || '-';
+
+            const waElem = document.getElementById('mdlWa');
+            if (item.wa) {
+                waElem.innerText = item.wa;
+                waElem.href = `https://wa.me/${item.wa.replace(/[^0-9]/g, '')}`;
+            } else {
+                waElem.innerText = '-';
+                waElem.removeAttribute('href');
+            }
+            
+            document.getElementById('mdlEmail').innerText = item.email || '-';
+
+            // Wali Details
+            document.getElementById('mdlWali1Name').innerText = item.wali1Name || '-';
+            document.getElementById('mdlWali1Relation').innerText = item.wali1Relation || '-';
+            document.getElementById('mdlWali2Name').innerText = item.wali2Name || '-';
+            document.getElementById('mdlWali2Relation').innerText = item.wali2Relation || '-';
+
+            document.getElementById('modalDetail').classList.remove('hidden');
+        };
+
+        // Robust JSONP Fallback to bypass iframe origin restriction
+        function fetchWithJsonp(url, timeout = 8000) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'gas_cb_' + Math.round(100000 * Math.random());
+                const script = document.createElement('script');
+                
+                const separator = url.includes('?') ? '&' : '?';
+                const urlWithCb = url + separator + 'callback=' + callbackName;
+
+                let isCleanedUp = false;
+                const cleanup = () => {
+                    if (isCleanedUp) return;
+                    isCleanedUp = true;
+                    delete window[callbackName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                };
+
+                window[callbackName] = function(data) {
+                    cleanup();
+                    resolve(data);
+                };
+
+                script.onerror = function() {
+                    cleanup();
+                    reject(new Error("JSONP Script Load Error"));
+                };
+
+                script.src = urlWithCb;
+                document.body.appendChild(script);
+
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        cleanup();
+                        reject(new Error("Request Timeout"));
+                    }
+                }, timeout);
+            });
+        }
+
+        function handleFetchedData(json) {
+            rawData = json;
+            document.getElementById('dataModeText').innerText = "Live Google Sheet Response";
+            document.getElementById('dataModeText').className = "text-emerald-700 font-bold";
+            document.getElementById('lastUpdatedText').innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+            applyFilters();
+            showToast(`Berhasil memuat ${json.length} data dari Google Sheets!`, 'success');
+        }
+
+        async function fetchGasData(url) {
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.classList.add('fa-spin');
+
+            let cleanUrl = url.trim();
+            // Automatically normalize Google Web App URL
+            if (cleanUrl.includes('script.google.com') && !cleanUrl.endsWith('/exec')) {
+                cleanUrl = cleanUrl.replace(/\/edit.*$/, '/exec').replace(/\/dev.*$/, '/exec');
+                if (!cleanUrl.endsWith('/exec')) {
+                    cleanUrl = cleanUrl.replace(/\?.*$/, '') + '/exec';
+                }
+                document.getElementById('gasUrlInput').value = cleanUrl;
+            }
+
+            try {
+                // Method 1: Standard CORS fetch with redirect handling
+                const response = await fetch(cleanUrl, { 
+                    method: 'GET', 
+                    mode: 'cors',
+                    redirect: 'follow'
+                });
+                
+                if (!response.ok) throw new Error("HTTP Status: " + response.status);
+                const json = await response.json();
+                
+                if (Array.isArray(json)) {
+                    if (json.length > 0) {
+                        handleFetchedData(json);
+                    } else {
+                        showToast("Spreadsheet terhubung, namun data belum ada.", "warning");
+                    }
+                    return;
+                }
+            } catch (fetchErr) {
+                // Method 2: Fallback to JSONP without throwing unhandled console errors
+                try {
+                    const jsonPData = await fetchWithJsonp(cleanUrl);
+                    if (Array.isArray(jsonPData)) {
+                        if (jsonPData.length > 0) {
+                            handleFetchedData(jsonPData);
+                        } else {
+                            showToast("Spreadsheet terhubung, namun data kosong.", "warning");
+                        }
+                        return;
+                    }
+                } catch (jsonpErr) {
+                    showAlertModal(
+                        "Gagal Terhubung ke Google Script",
+                        "Sistem tidak dapat mengambil data dari URL yang dimasukkan.\n\n" +
+                        "Langkah Penyelesaian:\n" +
+                        "1. Buka Google Apps Script Anda.\n" +
+                        "2. Klik Deploy > Manage deployments > Edit.\n" +
+                        "3. Pastikan 'Who has access' diatur ke 'Anyone' (Siapa saja).\n" +
+                        "4. Pilih 'New version' lalu klik Deploy.\n" +
+                        "5. Salin ulang URL Web App bertipe `/exec`.",
+                        true
+                    );
+                }
+            } finally {
+                refreshIcon.classList.remove('fa-spin');
+            }
+        }
+
+        function exportToCsv() {
+            if (filteredData.length === 0) {
+                showToast("Tidak ada data untuk diexport!", "warning");
+                return;
+            }
+
+            const headers = ["Timestamp", "Nomor WA", "Jenis Kelamin", "Nama Lengkap", "Kota", "Provinsi", "Kehadiran Wisudawan", "Kehadiran Wali", "Wali 1 Nama", "Wali 1 Hubungan", "Wali 2 Nama", "Wali 2 Hubungan", "Email", "ID Dokumen"];
+            
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += headers.join(",") + "\n";
+
+            filteredData.forEach(row => {
+                const values = [
+                    `"${row.timestamp || ''}"`,
+                    `"${row.wa || ''}"`,
+                    `"${row.gender || ''}"`,
+                    `"${row.fullName || ''}"`,
+                    `"${row.city || ''}"`,
+                    `"${row.province || ''}"`,
+                    `"${row.wisudawanAttendance || ''}"`,
+                    `"${row.waliAttendance || ''}"`,
+                    `"${row.wali1Name || ''}"`,
+                    `"${row.wali1Relation || ''}"`,
+                    `"${row.wali2Name || ''}"`,
+                    `"${row.wali2Relation || ''}"`,
+                    `"${row.email || ''}"`,
+                    `"${row.docId || ''}"`
+                ];
+                csvContent += values.join(",") + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekapitulasi_Wisuda_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("File CSV berhasil diunduh!", "success");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Load Mock Data Initially
+            rawData = generateMockData();
+            filteredData = [...rawData];
+            
+            document.getElementById('lastUpdatedText').innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+            
+            applyFilters();
+
+            // Modal Alert close handler
+            document.getElementById('btnCloseAlert').addEventListener('click', () => {
+                document.getElementById('modalAlert').classList.add('hidden');
+            });
+
+            // Event Listeners for Filters
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('filterGender').addEventListener('change', applyFilters);
+            document.getElementById('filterAttendance').addEventListener('change', applyFilters);
+            document.getElementById('filterWaliAttendance').addEventListener('change', applyFilters);
+
+            // Connect GAS Button
+            document.getElementById('btnConnectGas').addEventListener('click', () => {
+                const url = document.getElementById('gasUrlInput').value.trim();
+                if (!url) {
+                    showToast("Masukkan URL Web App Google Script terlebih dahulu.", "warning");
+                    return;
+                }
+                fetchGasData(url);
+            });
+
+            // Refresh Button
+            document.getElementById('btnRefresh').addEventListener('click', () => {
+                const url = document.getElementById('gasUrlInput').value.trim();
+                if (url) {
+                    fetchGasData(url);
+                } else {
+                    rawData = generateMockData();
+                    document.getElementById('lastUpdatedText').innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+                    applyFilters();
+                    showToast("Data simulasi berhasil diperbarui.", "info");
+                }
+            });
+
+            // Export Button
+            document.getElementById('btnExportCsv').addEventListener('click', exportToCsv);
+
+            // Detail Modal Close Handlers
+            const closeModal = () => document.getElementById('modalDetail').classList.add('hidden');
+            document.getElementById('btnCloseDetail').addEventListener('click', closeModal);
+            document.getElementById('btnCloseDetail2').addEventListener('click', closeModal);
+
+            // GAS Modal Handlers
+            const openGasModal = () => document.getElementById('modalGas').classList.remove('hidden');
+            const closeGasModal = () => document.getElementById('modalGas').classList.add('hidden');
+            document.getElementById('btnGasModal').addEventListener('click', openGasModal);
+            document.getElementById('btnCloseGas').addEventListener('click', closeGasModal);
+            document.getElementById('btnCloseGas2').addEventListener('click', closeGasModal);
+
+            // Copy Code Button
+            document.getElementById('btnCopyCode').addEventListener('click', () => {
+                const codeText = document.getElementById('gasCodeBlock').innerText;
+                const tempTextArea = document.createElement("textarea");
+                tempTextArea.value = codeText;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempTextArea);
+                showToast("Kode Apps Script telah disalin ke clipboard!", "success");
+            });
+        });
+    </script>
+</body>
+</html>
