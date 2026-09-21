@@ -118,7 +118,7 @@
                 <span id="lastUpdatedText">Terakhir diperbarui: -</span>
             </div>
             <div class="flex items-center space-x-2">
-                <input type="text" id="gasUrlInput" placeholder="Masukkan Web App URL GAS disini..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <input type="text" id="gasUrlInput" value="https://script.google.com/macros/s/AKfycbznNtfUFU2muiWi6XEhOMFfBVBn85U0X1u_I6Xe3OBLM1bKWkKMCCG5cEjYx3UbZ8pS/exec" placeholder="Masukkan Web App URL GAS disini..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                 <button id="btnConnectGas" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg text-xs transition">Hubungkan</button>
             </div>
         </div>
@@ -483,6 +483,9 @@ function doGet(e) {
     </div>
 
     <script>
+        // ====== KONFIGURASI URL GAS TERTANAM ======
+        const EMBEDDED_GAS_URL = "https://script.google.com/macros/s/AKfycbznNtfUFU2muiWi6XEhOMFfBVBn85U0X1u_I6Xe3OBLM1bKWkKMCCG5cEjYx3UbZ8pS/exec";
+
         // Toast Notification System (Replacing native alert)
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -1151,13 +1154,25 @@ function doGet(e) {
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Load Mock Data Initially
+            // Set URL tertanam ke input agar terlihat di UI
+            const urlInput = document.getElementById('gasUrlInput');
+            if (urlInput && !urlInput.value) {
+                urlInput.value = EMBEDDED_GAS_URL;
+            }
+
+            // Load Mock Data Initially sebagai fallback
             rawData = generateMockData();
             filteredData = [...rawData];
             
             document.getElementById('lastUpdatedText').innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
             
             applyFilters();
+
+            // ====== AUTO-CONNECT ke Google Sheets ======
+            // Tunggu sebentar agar UI render dulu, lalu fetch data live
+            setTimeout(() => {
+                fetchGasData(EMBEDDED_GAS_URL);
+            }, 400);
 
             // Modal Alert close handler
             document.getElementById('btnCloseAlert').addEventListener('click', () => {
@@ -1182,15 +1197,8 @@ function doGet(e) {
 
             // Refresh Button
             document.getElementById('btnRefresh').addEventListener('click', () => {
-                const url = document.getElementById('gasUrlInput').value.trim();
-                if (url) {
-                    fetchGasData(url);
-                } else {
-                    rawData = generateMockData();
-                    document.getElementById('lastUpdatedText').innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
-                    applyFilters();
-                    showToast("Data simulasi berhasil diperbarui.", "info");
-                }
+                const url = document.getElementById('gasUrlInput').value.trim() || EMBEDDED_GAS_URL;
+                fetchGasData(url);
             });
 
             // Export Button
