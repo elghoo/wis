@@ -20,24 +20,11 @@
             background-color: #f8fafc;
             color: #0f172a;
         }
-        /* Custom scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        .gradient-card {
-            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .gradient-card { background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); }
         .glass-header {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(12px);
@@ -46,391 +33,482 @@
             from { transform: translateY(-100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
-        .animate-slide-in {
-            animation: slideIn 0.3s ease-out forwards;
+        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes floatIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-float-in { animation: floatIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        /* Password Gate Background */
+        .gate-bg {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #2563eb 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .gate-bg::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            top: -200px;
+            right: -100px;
+            border-radius: 50%;
+        }
+        .gate-bg::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            bottom: -150px;
+            left: -100px;
+            border-radius: 50%;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 relative">
 
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
-
-    <!-- Custom Alert/Info Modal (Replacing native alert) -->
-    <div id="modalAlert" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-slide-in">
-            <div class="flex items-start space-x-3">
-                <div id="modalAlertIcon" class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-lg">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
+    <!-- ============ PASSWORD GATE OVERLAY ============ -->
+    <div id="passwordGate" class="fixed inset-0 z-[100] gate-bg hidden flex items-center justify-center p-4">
+        <div class="relative z-10 bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-float-in border border-white/20">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center text-white shadow-lg shadow-indigo-300/50 mb-4">
+                    <i class="fa-solid fa-shield-halved text-2xl"></i>
                 </div>
-                <div class="flex-1">
-                    <h3 id="modalAlertTitle" class="text-base font-bold text-slate-900">Pemberitahuan</h3>
-                    <p id="modalAlertMessage" class="text-xs text-slate-600 mt-1 whitespace-pre-line leading-relaxed"></p>
-                </div>
+                <h1 class="text-xl font-bold text-slate-900">Akses Terlindungi</h1>
+                <p class="text-xs text-slate-500 mt-1.5 max-w-xs">
+                    Masukkan password untuk mengakses Dashboard Rekapitulasi Kehadiran Wisuda
+                </p>
             </div>
-            <div class="mt-5 flex justify-end">
-                <button id="btnCloseAlert" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition">
-                    Mengerti
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <header class="sticky top-0 z-30 glass-header border-b border-slate-200/80 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
-                    <i class="fa-solid font-bold fa-graduation-cap text-lg"></i>
-                </div>
+            <form id="passwordForm" class="mt-6 space-y-4">
                 <div>
-                    <h1 class="text-lg font-bold text-slate-900 leading-tight">Rekapitulasi Kehadiran Wisuda</h1>
-                    <p class="text-xs text-slate-500">Sistem Monitoring & Analytics Spreadsheet Responses</p>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-2">
-                <button id="btnGasModal" class="px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all border border-indigo-200 flex items-center space-x-2">
-                    <i class="fa-solid fa-code"></i>
-                    <span class="hidden sm:inline">Setup Google Script</span>
-                </button>
-                <button id="btnExportCsv" class="px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all border border-emerald-200 flex items-center space-x-2">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <span class="hidden sm:inline">Export Excel/CSV</span>
-                </button>
-                <button id="btnRefresh" class="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all flex items-center space-x-2">
-                    <i class="fa-solid fa-rotate" id="refreshIcon"></i>
-                    <span>Refresh Data</span>
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-        <div id="statusBanner" class="p-3.5 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between flex-wrap gap-2">
-            <div class="flex items-center space-x-2">
-                <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                <span>Mode Data: <strong id="dataModeText" class="text-slate-800">Demo / Data Simulasi</strong></span>
-                <span class="text-slate-300">|</span>
-                <span id="lastUpdatedText">Terakhir diperbarui: -</span>
-            </div>
-            <div class="flex items-center space-x-2">
-                <input type="text" id="gasUrlInput" value="https://script.google.com/macros/s/AKfycbznNtfUFU2muiWi6XEhOMFfBVBn85U0X1u_I6Xe3OBLM1bKWkKMCCG5cEjYx3UbZ8pS/exec" placeholder="Masukkan Web App URL GAS disini..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                <button id="btnConnectGas" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg text-xs transition">Hubungkan</button>
-            </div>
-        </div>
-
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <!-- Total Respon -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Form Respon</p>
-                        <h3 class="text-2xl font-bold text-slate-900 mt-1" id="statTotalResponses">0</h3>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-base">
-                        <i class="fa-solid fa-clipboard-list"></i>
-                    </div>
-                </div>
-                <div class="mt-3 flex items-center text-xs text-slate-500">
-                    <span id="statSubResponses" class="font-medium text-slate-700">0 Total Entri</span>
-                </div>
-            </div>
-
-            <!-- Total Wisudawan (Laki-laki) -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Wisudawan (Laki-laki)</p>
-                        <h3 class="text-2xl font-bold text-blue-600 mt-1" id="statWisudawan">0</h3>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base">
-                        <i class="fa-solid fa-user-graduate"></i>
-                    </div>
-                </div>
-                <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
-                    <span>Hadir: <strong id="statWisudawanHadir" class="text-emerald-600">0</strong></span>
-                    <span>Tdk Hadir: <strong id="statWisudawanAbsen" class="text-rose-600">0</strong></span>
-                </div>
-            </div>
-
-            <!-- Total Wisudawati (Perempuan) -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Wisudawati (Perempuan)</p>
-                        <h3 class="text-2xl font-bold text-pink-600 mt-1" id="statWisudawati">0</h3>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center text-base">
-                        <i class="fa-solid fa-user-graduate"></i>
-                    </div>
-                </div>
-                <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
-                    <span>Hadir: <strong id="statWisudawatiHadir" class="text-emerald-600">0</strong></span>
-                    <span>Tdk Hadir: <strong id="statWisudawatiAbsen" class="text-rose-600">0</strong></span>
-                </div>
-            </div>
-
-            <!-- Total Wali / Orang Tua -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Wali Hadir</p>
-                        <h3 class="text-2xl font-bold text-amber-600 mt-1" id="statTotalWali">0</h3>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                </div>
-                <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
-                    <span>Laki-laki: <strong id="statWaliLaki" class="text-blue-600">0</strong></span>
-                    <span>Perempuan: <strong id="statWaliPerempuan" class="text-pink-600">0</strong></span>
-                </div>
-            </div>
-
-            <!-- Total Pengunjung Main Hall -->
-            <div class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-medium text-indigo-100 uppercase tracking-wider">Estimasi Hadir Fisik</p>
-                        <h3 class="text-2xl font-bold text-white mt-1" id="statTotalPengunjung">0</h3>
-                    </div>
-                    <div class="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center text-base backdrop-blur-xs">
-                        <i class="fa-solid fa-building-user"></i>
-                    </div>
-                </div>
-                <div class="mt-3 flex items-center text-xs text-indigo-100 justify-between">
-                    <span>Tingkat Kehadiran:</span>
-                    <strong id="statAttendanceRate" class="text-white bg-white/20 px-2 py-0.5 rounded text-xs">0%</strong>
-                </div>
-            </div>
-        </section>
-
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Chart 1: Perbandingan Kehadiran Wisudawan/ti -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
-                        <i class="fa-solid fa-chart-pie text-indigo-600"></i>
-                        <span>Kehadiran per Gender</span>
-                    </h2>
-                </div>
-                <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
-                    <canvas id="chartGenderAttendance"></canvas>
-                </div>
-            </div>
-
-            <!-- Chart 2: Kehadiran Wali / Orang Tua -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
-                        <i class="fa-solid fa-chart-bar text-amber-600"></i>
-                        <span>Status Kehadiran Wali</span>
-                    </h2>
-                </div>
-                <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
-                    <canvas id="chartWaliStatus"></canvas>
-                </div>
-            </div>
-
-            <!-- Chart 3: Top Asal Provinsi Wisudawan/ti -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
-                        <i class="fa-solid fa-map-location-dot text-emerald-600"></i>
-                        <span>Top 5 Demografi Provinsi</span>
-                    </h2>
-                </div>
-                <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
-                    <canvas id="chartProvince"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <!-- Filter Bar -->
-            <div class="p-5 border-b border-slate-100 space-y-4">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-base font-bold text-slate-900">Data Detail Rekapitulasi</h2>
-                        <p class="text-xs text-slate-500">Daftar lengkap pendaftar wisuda beserta wali dan status kehadiran</p>
-                    </div>
-                    <div class="flex items-center space-x-2 w-full sm:w-auto">
-                        <span id="tableRecordCount" class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg font-medium">0 Data Ditampilkan</span>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                    <!-- Search Input -->
+                    <label class="text-xs font-semibold text-slate-700 mb-1.5 block">Password</label>
                     <div class="relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="searchInput" placeholder="Cari nama, WhatsApp, email, ID..." class="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input 
+                            type="password" 
+                            id="passwordInput" 
+                            placeholder="Masukkan password..." 
+                            autocomplete="off"
+                            class="w-full pl-10 pr-11 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 transition"
+                        >
+                        <button 
+                            type="button"
+                            id="togglePassword"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                            tabindex="-1"
+                        >
+                            <i class="fa-solid fa-eye text-sm" id="toggleIcon"></i>
+                        </button>
                     </div>
-
-                    <!-- Gender Filter -->
-                    <div>
-                        <select id="filterGender" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
-                            <option value="ALL">Semua Jenis Kelamin</option>
-                            <option value="Laki-laki">Wisudawan (Laki-laki)</option>
-                            <option value="Perempuan">Wisudawati (Perempuan)</option>
-                        </select>
-                    </div>
-
-                    <!-- Wisudawan Attendance Filter -->
-                    <div>
-                        <select id="filterAttendance" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
-                            <option value="ALL">Semua Kehadiran Wisudawan/i</option>
-                            <option value="Hadir">Hadir</option>
-                            <option value="Tidak Hadir">Tidak Hadir</option>
-                        </select>
-                    </div>
-
-                    <!-- Wali Attendance Filter -->
-                    <div>
-                        <select id="filterWaliAttendance" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
-                            <option value="ALL">Semua Kehadiran Wali</option>
-                            <option value="Hadir">Ada Wali Hadir</option>
-                            <option value="Tidak Hadir">Tanpa Wali</option>
-                        </select>
-                    </div>
+                    <p id="passwordError" class="text-xs text-rose-600 mt-2 hidden items-center">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                        <span>Password salah. Silakan coba lagi.</span>
+                    </p>
                 </div>
-            </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse">
-                    <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider">
-                            <th class="py-3.5 px-4">Wisudawan/i</th>
-                            <th class="py-3.5 px-4">Gender</th>
-                            <th class="py-3.5 px-4">Asal Daerah</th>
-                            <th class="py-3.5 px-4 text-center">Kehadiran</th>
-                            <th class="py-3.5 px-4 text-center">Kehadiran Wali</th>
-                            <th class="py-3.5 px-4">Rincian Wali</th>
-                            <th class="py-3.5 px-4">Kontak</th>
-                            <th class="py-3.5 px-4 text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700">
-                        <!-- Dynamic Row Content -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Table Pagination -->
-            <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-                <div id="paginationInfo">Menampilkan 0 - 0 dari 0 entri</div>
-                <div class="flex items-center space-x-1" id="paginationButtons">
-                    <!-- Dynamic Buttons -->
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Modal Detail Participant -->
-    <div id="modalDetail" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-start border-b border-slate-100 pb-4">
-                <div>
-                    <span id="mdlDocId" class="text-[10px] font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded uppercase font-semibold">DOC-00000</span>
-                    <h3 id="mdlName" class="text-lg font-bold text-slate-900 mt-1">Nama Lengkap</h3>
-                    <p id="mdlTimestamp" class="text-xs text-slate-400">Timestamp: -</p>
-                </div>
-                <button id="btnCloseDetail" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
+                <button 
+                    type="submit" 
+                    id="btnLogin"
+                    class="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-indigo-300/40 flex items-center justify-center space-x-2 disabled:opacity-70"
+                >
+                    <i class="fa-solid fa-unlock-keyhole"></i>
+                    <span>Masuk ke Dashboard</span>
                 </button>
-            </div>
+            </form>
 
-            <div class="mt-4 space-y-4 text-xs">
-                <!-- Status Row -->
-                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-                    <div>
-                        <span class="text-slate-400 block text-[11px]">Kehadiran Wisudawan/i:</span>
-                        <span id="mdlWisudawanStatus" class="font-semibold text-slate-800 text-sm">-</span>
-                    </div>
-                    <div>
-                        <span class="text-slate-400 block text-[11px]">Kehadiran Wali/Orang Tua:</span>
-                        <span id="mdlWaliStatus" class="font-semibold text-slate-800 text-sm">-</span>
-                    </div>
-                </div>
-
-                <!-- Info Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Biodata Wisudawan/i</p>
-                        <ul class="space-y-1.5 text-slate-600">
-                            <li><span class="text-slate-400">Jenis Kelamin:</span> <span id="mdlGender" class="font-medium">-</span></li>
-                            <li><span class="text-slate-400">Kota Asal:</span> <span id="mdlCity" class="font-medium">-</span></li>
-                            <li><span class="text-slate-400">Provinsi Asal:</span> <span id="mdlProvince" class="font-medium">-</span></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Informasi Kontak</p>
-                        <ul class="space-y-1.5 text-slate-600">
-                            <li><span class="text-slate-400">No. WhatsApp:</span> <a id="mdlWa" href="#" target="_blank" class="text-indigo-600 hover:underline font-medium">-</a></li>
-                            <li><span class="text-slate-400">Email Address:</span> <span id="mdlEmail" class="font-medium">-</span></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Detail Wali -->
-                <div>
-                    <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Data Wali / Pendamping Yang Hadir</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
-                            <span class="font-bold text-amber-800 block mb-1">Wali Pertama (1)</span>
-                            <p class="text-slate-700">Nama: <strong id="mdlWali1Name">-</strong></p>
-                            <p class="text-slate-600">Hubungan: <span id="mdlWali1Relation">-</span></p>
-                        </div>
-                        <div class="p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
-                            <span class="font-bold text-amber-800 block mb-1">Wali Kedua (2)</span>
-                            <p class="text-slate-700">Nama: <strong id="mdlWali2Name">-</strong></p>
-                            <p class="text-slate-600">Hubungan: <span id="mdlWali2Relation">-</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end">
-                <button id="btnCloseDetail2" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Tutup</button>
+            <div class="mt-6 pt-4 border-t border-slate-100 text-center">
+                <!-- p class="text-[11px] text-slate-400">
+                    <i class="fa-solid fa-circle-info mr-1"></i>
+                    Hubungi admin jika Anda lupa password
+            </p -->
             </div>
         </div>
     </div>
+    <!-- ============ END PASSWORD GATE ============ -->
 
-    <!-- Modal Google Apps Script Generator -->
-    <div id="modalGas" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-code text-indigo-600 text-lg"></i>
-                    <h3 class="text-base font-bold text-slate-900">Panduan & Code Google Apps Script (GAS)</h3>
+    <!-- Main Dashboard Content (Hidden until authenticated) -->
+    <div id="dashboardContent" class="min-h-screen flex flex-col hidden">
+
+        <!-- Toast Notification Container -->
+        <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+        <!-- Custom Alert/Info Modal -->
+        <div id="modalAlert" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-slide-in">
+                <div class="flex items-start space-x-3">
+                    <div id="modalAlertIcon" class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-lg">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="modalAlertTitle" class="text-base font-bold text-slate-900">Pemberitahuan</h3>
+                        <p id="modalAlertMessage" class="text-xs text-slate-600 mt-1 whitespace-pre-line leading-relaxed"></p>
+                    </div>
                 </div>
-                <button id="btnCloseGas" class="text-slate-400 hover:text-slate-600 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <div class="mt-5 flex justify-end">
+                    <button id="btnCloseAlert" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition">
+                        Mengerti
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <header class="sticky top-0 z-30 glass-header border-b border-slate-200/80 shadow-xs">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                        <i class="fa-solid font-bold fa-graduation-cap text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-900 leading-tight">Rekapitulasi Kehadiran Wisuda</h1>
+                        <p class="text-xs text-slate-500">Sistem Monitoring & Analytics Spreadsheet Responses</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button id="btnGasModal" class="px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-all border border-indigo-200 flex items-center space-x-2">
+                        <i class="fa-solid fa-code"></i>
+                        <span class="hidden sm:inline">Setup Google Script</span>
+                    </button>
+                    <button id="btnExportCsv" class="px-3.5 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all border border-emerald-200 flex items-center space-x-2">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span class="hidden sm:inline">Export Excel/CSV</span>
+                    </button>
+                    <button id="btnRefresh" class="px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all flex items-center space-x-2">
+                        <i class="fa-solid fa-rotate" id="refreshIcon"></i>
+                        <span>Refresh Data</span>
+                    </button>
+                    <button id="btnLogout" title="Keluar" class="px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition-all border border-rose-200 flex items-center space-x-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span class="hidden sm:inline">Keluar</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+            <div id="statusBanner" class="p-3.5 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center space-x-2">
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span>Mode Data: <strong id="dataModeText" class="text-slate-800">Demo / Data Simulasi</strong></span>
+                    <span class="text-slate-300">|</span>
+                    <span id="lastUpdatedText">Terakhir diperbarui: -</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="gasUrlInput" value="https://script.google.com/macros/s/AKfycbznNtfUFU2muiWi6XEhOMFfBVBn85U0X1u_I6Xe3OBLM1bKWkKMCCG5cEjYx3UbZ8pS/exec" placeholder="Masukkan Web App URL GAS disini..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <button id="btnConnectGas" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg text-xs transition">Hubungkan</button>
+                </div>
             </div>
 
-            <div class="mt-4 space-y-4 text-xs text-slate-600">
-                <p>Salin kode Apps Script di bawah ini ke Spreadsheet Anda (menu <strong>Ekstensi &gt; Apps Script</strong>) untuk menghubungkan formulir Spreadsheet secara live dengan Dashboard ini.</p>
-                
-                <ol class="list-decimal pl-4 space-y-1 text-slate-700 font-medium">
-                    <li>Buka Google Sheets respon formulir wisuda Anda.</li>
-                    <li>Klik <strong>Ekstensi &gt; Apps Script</strong>.</li>
-                    <li>Hapus semua kode di editor `Code.gs` dan tempelkan skrip berikut.</li>
-                    <li>Klik <strong>Terapkan (Deploy) &gt; Terapkan sebagai Web App</strong>.</li>
-                    <li>Atur <em>Who has access</em> / <em>Siapa yang memiliki akses</em> menjadi: <strong>Anyone / Siapa Saja</strong>.</li>
-                    <li>Salin Web App URL dan tempelkan di kotak input Web App URL pada bagian atas dashboard.</li>
-                </ol>
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Total Respon -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Form Respon</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="statTotalResponses">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-base">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center text-xs text-slate-500">
+                        <span id="statSubResponses" class="font-medium text-slate-700">0 Total Entri</span>
+                    </div>
+                </div>
 
-                <div class="relative">
-                    <button id="btnCopyCode" class="absolute right-3 top-3 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-semibold transition">
-                        <i class="fa-solid fa-copy mr-1"></i>Salin Kode
+                <!-- Total Wisudawan -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Wisudawan (Laki-laki)</p>
+                            <h3 class="text-2xl font-bold text-blue-600 mt-1" id="statWisudawan">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
+                        <span>Hadir: <strong id="statWisudawanHadir" class="text-emerald-600">0</strong></span>
+                        <span>Tdk Hadir: <strong id="statWisudawanAbsen" class="text-rose-600">0</strong></span>
+                    </div>
+                </div>
+
+                <!-- Total Wisudawati -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Wisudawati (Perempuan)</p>
+                            <h3 class="text-2xl font-bold text-pink-600 mt-1" id="statWisudawati">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center text-base">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
+                        <span>Hadir: <strong id="statWisudawatiHadir" class="text-emerald-600">0</strong></span>
+                        <span>Tdk Hadir: <strong id="statWisudawatiAbsen" class="text-rose-600">0</strong></span>
+                    </div>
+                </div>
+
+                <!-- Total Wali -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Wali Hadir</p>
+                            <h3 class="text-2xl font-bold text-amber-600 mt-1" id="statTotalWali">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center text-xs text-slate-500 justify-between">
+                        <span>Laki-laki: <strong id="statWaliLaki" class="text-blue-600">0</strong></span>
+                        <span>Perempuan: <strong id="statWaliPerempuan" class="text-pink-600">0</strong></span>
+                    </div>
+                </div>
+
+                <!-- Total Pengunjung -->
+                <div class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden group hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-medium text-indigo-100 uppercase tracking-wider">Estimasi Hadir Fisik</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="statTotalPengunjung">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center text-base backdrop-blur-xs">
+                            <i class="fa-solid fa-building-user"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center text-xs text-indigo-100 justify-between">
+                        <span>Tingkat Kehadiran:</span>
+                        <strong id="statAttendanceRate" class="text-white bg-white/20 px-2 py-0.5 rounded text-xs">0%</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+                            <span>Kehadiran per Gender</span>
+                        </h2>
+                    </div>
+                    <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
+                        <canvas id="chartGenderAttendance"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-bar text-amber-600"></i>
+                            <span>Status Kehadiran Wali</span>
+                        </h2>
+                    </div>
+                    <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
+                        <canvas id="chartWaliStatus"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-sm font-bold text-slate-900 flex items-center space-x-2">
+                            <i class="fa-solid fa-map-location-dot text-emerald-600"></i>
+                            <span>Top 5 Demografi Provinsi</span>
+                        </h2>
+                    </div>
+                    <div class="relative flex-1 min-h-[220px] flex items-center justify-center">
+                        <canvas id="chartProvince"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Data Detail Rekapitulasi</h2>
+                            <p class="text-xs text-slate-500">Daftar lengkap pendaftar wisuda beserta wali dan status kehadiran</p>
+                        </div>
+                        <div class="flex items-center space-x-2 w-full sm:w-auto">
+                            <span id="tableRecordCount" class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg font-medium">0 Data Ditampilkan</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="searchInput" placeholder="Cari nama, WhatsApp, email, ID..." class="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50">
+                        </div>
+
+                        <div>
+                            <select id="filterGender" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
+                                <option value="ALL">Semua Jenis Kelamin</option>
+                                <option value="Laki-laki">Wisudawan (Laki-laki)</option>
+                                <option value="Perempuan">Wisudawati (Perempuan)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <select id="filterAttendance" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
+                                <option value="ALL">Semua Kehadiran Wisudawan/i</option>
+                                <option value="Hadir">Hadir</option>
+                                <option value="Tidak Hadir">Tidak Hadir</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <select id="filterWaliAttendance" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-700">
+                                <option value="ALL">Semua Kehadiran Wali</option>
+                                <option value="Hadir">Ada Wali Hadir</option>
+                                <option value="Tidak Hadir">Tanpa Wali</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider">
+                                <th class="py-3.5 px-4">Wisudawan/i</th>
+                                <th class="py-3.5 px-4">Gender</th>
+                                <th class="py-3.5 px-4">Asal Daerah</th>
+                                <th class="py-3.5 px-4 text-center">Kehadiran</th>
+                                <th class="py-3.5 px-4 text-center">Kehadiran Wali</th>
+                                <th class="py-3.5 px-4">Rincian Wali</th>
+                                <th class="py-3.5 px-4">Kontak</th>
+                                <th class="py-3.5 px-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+                    <div id="paginationInfo">Menampilkan 0 - 0 dari 0 entri</div>
+                    <div class="flex items-center space-x-1" id="paginationButtons">
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Modal Detail Participant -->
+        <div id="modalDetail" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-start border-b border-slate-100 pb-4">
+                    <div>
+                        <span id="mdlDocId" class="text-[10px] font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded uppercase font-semibold">DOC-00000</span>
+                        <h3 id="mdlName" class="text-lg font-bold text-slate-900 mt-1">Nama Lengkap</h3>
+                        <p id="mdlTimestamp" class="text-xs text-slate-400">Timestamp: -</p>
+                    </div>
+                    <button id="btnCloseDetail" class="text-slate-400 hover:text-slate-600 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
-                    <pre class="bg-slate-900 text-indigo-200 p-4 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed border border-slate-800" id="gasCodeBlock">
+                </div>
+
+                <div class="mt-4 space-y-4 text-xs">
+                    <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                        <div>
+                            <span class="text-slate-400 block text-[11px]">Kehadiran Wisudawan/i:</span>
+                            <span id="mdlWisudawanStatus" class="font-semibold text-slate-800 text-sm">-</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[11px]">Kehadiran Wali/Orang Tua:</span>
+                            <span id="mdlWaliStatus" class="font-semibold text-slate-800 text-sm">-</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Biodata Wisudawan/i</p>
+                            <ul class="space-y-1.5 text-slate-600">
+                                <li><span class="text-slate-400">Jenis Kelamin:</span> <span id="mdlGender" class="font-medium">-</span></li>
+                                <li><span class="text-slate-400">Kota Asal:</span> <span id="mdlCity" class="font-medium">-</span></li>
+                                <li><span class="text-slate-400">Provinsi Asal:</span> <span id="mdlProvince" class="font-medium">-</span></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Informasi Kontak</p>
+                            <ul class="space-y-1.5 text-slate-600">
+                                <li><span class="text-slate-400">No. WhatsApp:</span> <a id="mdlWa" href="#" target="_blank" class="text-indigo-600 hover:underline font-medium">-</a></li>
+                                <li><span class="text-slate-400">Email Address:</span> <span id="mdlEmail" class="font-medium">-</span></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Data Wali / Pendamping Yang Hadir</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
+                                <span class="font-bold text-amber-800 block mb-1">Wali Pertama (1)</span>
+                                <p class="text-slate-700">Nama: <strong id="mdlWali1Name">-</strong></p>
+                                <p class="text-slate-600">Hubungan: <span id="mdlWali1Relation">-</span></p>
+                            </div>
+                            <div class="p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl">
+                                <span class="font-bold text-amber-800 block mb-1">Wali Kedua (2)</span>
+                                <p class="text-slate-700">Nama: <strong id="mdlWali2Name">-</strong></p>
+                                <p class="text-slate-600">Hubungan: <span id="mdlWali2Relation">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button id="btnCloseDetail2" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium text-xs">Tutup</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Google Apps Script Generator -->
+        <div id="modalGas" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-code text-indigo-600 text-lg"></i>
+                        <h3 class="text-base font-bold text-slate-900">Panduan & Code Google Apps Script (GAS)</h3>
+                    </div>
+                    <button id="btnCloseGas" class="text-slate-400 hover:text-slate-600 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="mt-4 space-y-4 text-xs text-slate-600">
+                    <p>Salin kode Apps Script di bawah ini ke Spreadsheet Anda (menu <strong>Ekstensi &gt; Apps Script</strong>) untuk menghubungkan formulir Spreadsheet secara live dengan Dashboard ini.</p>
+                    
+                    <ol class="list-decimal pl-4 space-y-1 text-slate-700 font-medium">
+                        <li>Buka Google Sheets respon formulir wisuda Anda.</li>
+                        <li>Klik <strong>Ekstensi &gt; Apps Script</strong>.</li>
+                        <li>Hapus semua kode di editor `Code.gs` dan tempelkan skrip berikut.</li>
+                        <li>Klik <strong>Terapkan (Deploy) &gt; Terapkan sebagai Web App</strong>.</li>
+                        <li>Atur <em>Who has access</em> / <em>Siapa yang memiliki akses</em> menjadi: <strong>Anyone / Siapa Saja</strong>.</li>
+                        <li>Salin Web App URL dan tempelkan di kotak input Web App URL pada bagian atas dashboard.</li>
+                    </ol>
+
+                    <div class="relative">
+                        <button id="btnCopyCode" class="absolute right-3 top-3 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-semibold transition">
+                            <i class="fa-solid fa-copy mr-1"></i>Salin Kode
+                        </button>
+                        <pre class="bg-slate-900 text-indigo-200 p-4 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed border border-slate-800" id="gasCodeBlock">
 function doGet(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = sheet.getDataRange().getValues();
@@ -439,7 +517,7 @@ function doGet(e) {
   if (data.length > 1) {
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
-      if(!row[0] && !row[3]) continue; // Skip empty rows
+      if(!row[0] && !row[3]) continue;
       
       var item = {
         timestamp: row[0] ? String(row[0]) : '',
@@ -463,7 +541,6 @@ function doGet(e) {
   
   var jsonOutput = JSON.stringify(result);
   
-  // JSONP support to bypass CORS in iframe/blob origins
   if (e && e.parameter && e.parameter.callback) {
     return ContentService.createTextOutput(e.parameter.callback + '(' + jsonOutput + ')')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -473,22 +550,205 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 </pre>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button id="btnCloseGas2" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-xs">Selesai</button>
                 </div>
             </div>
-
-            <div class="mt-6 flex justify-end">
-                <button id="btnCloseGas2" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-xs">Selesai</button>
-            </div>
         </div>
+
     </div>
+    <!-- End Dashboard Content -->
 
     <script>
-        // ====== KONFIGURASI URL GAS TERTANAM ======
+        // ====== KONFIGURASI ======
         const EMBEDDED_GAS_URL = "https://script.google.com/macros/s/AKfycbznNtfUFU2muiWi6XEhOMFfBVBn85U0X1u_I6Xe3OBLM1bKWkKMCCG5cEjYx3UbZ8pS/exec";
+        const DASHBOARD_PASSWORD = "@Rraayah1234";
+        const AUTH_KEY = "wisuda_dashboard_auth";
 
-        // Toast Notification System (Replacing native alert)
+        // ====== PASSWORD GATE LOGIC ======
+        function isAuthenticated() {
+            try {
+                return sessionStorage.getItem(AUTH_KEY) === "granted";
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function setAuthenticated() {
+            try {
+                sessionStorage.setItem(AUTH_KEY, "granted");
+            } catch (e) {}
+        }
+
+        function clearAuthenticated() {
+            try {
+                sessionStorage.removeItem(AUTH_KEY);
+            } catch (e) {}
+        }
+
+        function showDashboard() {
+            document.getElementById('passwordGate').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.remove('hidden');
+            // Initialize dashboard after auth
+            initDashboard();
+        }
+
+        function showPasswordGate() {
+            document.getElementById('passwordGate').classList.remove('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            // Auto focus after a small delay
+            setTimeout(() => {
+                const inp = document.getElementById('passwordInput');
+                if (inp) inp.focus();
+            }, 100);
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const input = document.getElementById('passwordInput');
+            const errorMsg = document.getElementById('passwordError');
+            const btn = document.getElementById('btnLogin');
+            const gate = document.getElementById('passwordGate');
+
+            const entered = input.value;
+
+            // Simulasi loading sebentar
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Memverifikasi...</span>';
+
+            setTimeout(() => {
+                if (entered === DASHBOARD_PASSWORD) {
+                    setAuthenticated();
+                    errorMsg.classList.add('hidden');
+                    errorMsg.classList.remove('flex');
+                    input.value = '';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-unlock-keyhole"></i><span>Masuk ke Dashboard</span>';
+                    showDashboard();
+                } else {
+                    // Wrong password → shake animation
+                    errorMsg.classList.remove('hidden');
+                    errorMsg.classList.add('flex');
+                    gate.querySelector('.animate-float-in').classList.add('animate-shake');
+                    setTimeout(() => {
+                        gate.querySelector('.animate-float-in').classList.remove('animate-shake');
+                    }, 450);
+                    input.value = '';
+                    input.focus();
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-unlock-keyhole"></i><span>Masuk ke Dashboard</span>';
+                }
+            }, 350);
+        }
+
+        // ====== DASHBOARD INITIALIZATION ======
+        let dashboardInitialized = false;
+
+        function initDashboard() {
+            if (dashboardInitialized) return;
+            dashboardInitialized = true;
+
+            // Set URL tertanam
+            const urlInput = document.getElementById('gasUrlInput');
+            if (urlInput && !urlInput.value) {
+                urlInput.value = EMBEDDED_GAS_URL;
+            }
+
+            // Load Mock Data sebagai fallback
+            rawData = generateMockData();
+            filteredData = [...rawData];
+            document.getElementById('lastUpdatedText').innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+            applyFilters();
+
+            // Auto-connect ke Google Sheets
+            setTimeout(() => {
+                fetchGasData(EMBEDDED_GAS_URL);
+            }, 500);
+
+            // Bind event listeners
+            bindDashboardEvents();
+        }
+
+        function bindDashboardEvents() {
+            // Modal Alert close handler
+            document.getElementById('btnCloseAlert').addEventListener('click', () => {
+                document.getElementById('modalAlert').classList.add('hidden');
+            });
+
+            // Filters
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('filterGender').addEventListener('change', applyFilters);
+            document.getElementById('filterAttendance').addEventListener('change', applyFilters);
+            document.getElementById('filterWaliAttendance').addEventListener('change', applyFilters);
+
+            // Connect GAS Button
+            document.getElementById('btnConnectGas').addEventListener('click', () => {
+                const url = document.getElementById('gasUrlInput').value.trim();
+                if (!url) {
+                    showToast("Masukkan URL Web App Google Script terlebih dahulu.", "warning");
+                    return;
+                }
+                fetchGasData(url);
+            });
+
+            // Refresh Button
+            document.getElementById('btnRefresh').addEventListener('click', () => {
+                const url = document.getElementById('gasUrlInput').value.trim() || EMBEDDED_GAS_URL;
+                fetchGasData(url);
+            });
+
+            // Logout Button
+            document.getElementById('btnLogout').addEventListener('click', () => {
+                if (confirm("Yakin ingin keluar dari dashboard?")) {
+                    clearAuthenticated();
+                    location.reload();
+                }
+            });
+
+            // Export Button
+            document.getElementById('btnExportCsv').addEventListener('click', exportToCsv);
+
+            // Detail Modal Close
+            const closeModal = () => document.getElementById('modalDetail').classList.add('hidden');
+            document.getElementById('btnCloseDetail').addEventListener('click', closeModal);
+            document.getElementById('btnCloseDetail2').addEventListener('click', closeModal);
+
+            // GAS Modal
+            const openGasModal = () => document.getElementById('modalGas').classList.remove('hidden');
+            const closeGasModal = () => document.getElementById('modalGas').classList.add('hidden');
+            document.getElementById('btnGasModal').addEventListener('click', openGasModal);
+            document.getElementById('btnCloseGas').addEventListener('click', closeGasModal);
+            document.getElementById('btnCloseGas2').addEventListener('click', closeGasModal);
+
+            // Copy Code
+            document.getElementById('btnCopyCode').addEventListener('click', () => {
+                const codeText = document.getElementById('gasCodeBlock').innerText;
+                const tempTextArea = document.createElement("textarea");
+                tempTextArea.value = codeText;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempTextArea);
+                showToast("Kode Apps Script telah disalin ke clipboard!", "success");
+            });
+        }
+
+        // ====== GLOBAL STATE ======
+        let rawData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const pageSize = 8;
+        let chartGender = null;
+        let chartWali = null;
+        let chartProv = null;
+
+        // Toast Notification
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
+            if (!container) return;
             const toast = document.createElement('div');
             toast.className = `pointer-events-auto flex items-center space-x-2 px-4 py-3 rounded-xl shadow-lg text-xs font-medium text-white transition-all transform animate-slide-in ${
                 type === 'success' ? 'bg-emerald-600' :
@@ -512,7 +772,6 @@ function doGet(e) {
             }, 3500);
         }
 
-        // Custom Modal Alert Dialog
         function showAlertModal(title, message, isError = false) {
             const modal = document.getElementById('modalAlert');
             const icon = document.getElementById('modalAlertIcon');
@@ -533,16 +792,6 @@ function doGet(e) {
             modal.classList.remove('hidden');
         }
 
-        // Global State
-        let rawData = [];
-        let filteredData = [];
-        let currentPage = 1;
-        const pageSize = 8;
-        let chartGender = null;
-        let chartWali = null;
-        let chartProv = null;
-
-        // Helper function to classify Wali gender from relation string
         function classifyWaliGender(relation) {
             if (!relation || !relation.trim()) return null;
             const rel = relation.toLowerCase().trim();
@@ -551,10 +800,9 @@ function doGet(e) {
             } else if (rel.includes('ibu') || rel.includes('istri') || rel.includes('bibi') || rel.includes('nenek') || rel.includes('perempuan')) {
                 return 'Perempuan';
             }
-            return 'Laki-laki'; // default fallback if non-standard string is provided
+            return 'Laki-laki';
         }
 
-        // Realistic Mock Generator
         function generateMockData() {
             const firstNames = ["Ahmad", "Budi", "Chandra", "Dewi", "Eka", "Fajar", "Gita", "Hadi", "Indah", "Joko", "Kartika", "Lestari", "Muhammad", "Nia", "Oki", "Putri", "Rian", "Siti", "Taufik", "Utami", "Vina", "Wahyu", "Yusuf", "Zahra"];
             const lastNames = ["Pratama", "Wijaya", "Kusuma", "Santoso", "Saputra", "Utomo", "Nugroho", "Setiawan", "Hidayat", "Laksana", "Permana", "Suryani", "Wibowo", "Ramadhan"];
@@ -629,13 +877,9 @@ function doGet(e) {
         }
 
         function calculateStats(data) {
-            let wisudawanHadir = 0;
-            let wisudawanAbsen = 0;
-            let wisudawatiHadir = 0;
-            let wisudawatiAbsen = 0;
-            
-            let totalWaliLaki = 0;
-            let totalWaliPerempuan = 0;
+            let wisudawanHadir = 0, wisudawanAbsen = 0;
+            let wisudawatiHadir = 0, wisudawatiAbsen = 0;
+            let totalWaliLaki = 0, totalWaliPerempuan = 0;
 
             data.forEach(item => {
                 const g = (item.gender || '').toLowerCase().trim();
@@ -650,14 +894,12 @@ function doGet(e) {
                     else wisudawatiAbsen++;
                 }
 
-                // Hitung kehadiran Wali 1 berdasarkan terisinya kolom hubungan
                 if (item.wali1Relation && item.wali1Relation.trim() !== '') {
                     const g1 = classifyWaliGender(item.wali1Relation);
                     if (g1 === 'Laki-laki') totalWaliLaki++;
                     else if (g1 === 'Perempuan') totalWaliPerempuan++;
                 }
 
-                // Hitung kehadiran Wali 2 berdasarkan terisinya kolom hubungan
                 if (item.wali2Relation && item.wali2Relation.trim() !== '') {
                     const g2 = classifyWaliGender(item.wali2Relation);
                     if (g2 === 'Laki-laki') totalWaliLaki++;
@@ -673,7 +915,6 @@ function doGet(e) {
             const totalPengunjung = totalHadirWisuda + totalWaliCount;
             const attendanceRate = totalResponses > 0 ? ((totalHadirWisuda / totalResponses) * 100).toFixed(1) : 0;
 
-            // Update UI elements
             document.getElementById('statTotalResponses').innerText = totalResponses;
             document.getElementById('statSubResponses').innerText = `${totalHadirWisuda} Hadir • ${totalResponses - totalHadirWisuda} Absen`;
             
@@ -694,7 +935,6 @@ function doGet(e) {
         }
 
         function updateCharts(data) {
-            // Chart 1: Kehadiran Wisudawan (Laki-laki) vs Wisudawati (Perempuan)
             let maleHadir = 0, maleAbsen = 0, femaleHadir = 0, femaleAbsen = 0;
             data.forEach(d => {
                 const g = (d.gender || '').toLowerCase().trim();
@@ -726,17 +966,12 @@ function doGet(e) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
-                    },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
                     cutout: '65%'
                 }
             });
 
-            // Chart 2: Status & Komposisi Wali (Laki-laki vs Perempuan)
-            let waliLakiCount = 0;
-            let waliPerempuanCount = 0;
-            
+            let waliLakiCount = 0, waliPerempuanCount = 0;
             data.forEach(d => {
                 if (d.wali1Relation && d.wali1Relation.trim() !== '') {
                     const g1 = classifyWaliGender(d.wali1Relation);
@@ -773,7 +1008,6 @@ function doGet(e) {
                 }
             });
 
-            // Chart 3: Top Provinces
             const provMap = {};
             data.forEach(d => {
                 const prov = d.province || 'Lainnya';
@@ -887,7 +1121,6 @@ function doGet(e) {
                 tbody.appendChild(tr);
             });
 
-            // Pagination Controls
             document.getElementById('paginationInfo').innerText = `Menampilkan ${startIndex + 1} - ${endIndex} dari ${total} entri`;
             
             const btnContainer = document.getElementById('paginationButtons');
@@ -924,7 +1157,6 @@ function doGet(e) {
             const waliAttendance = document.getElementById('filterWaliAttendance').value;
 
             filteredData = rawData.filter(item => {
-                // Search match
                 const matchSearch = !search || 
                     (item.fullName && item.fullName.toLowerCase().includes(search)) ||
                     (item.wa && item.wa.includes(search)) ||
@@ -933,20 +1165,17 @@ function doGet(e) {
                     (item.city && item.city.toLowerCase().includes(search)) ||
                     (item.province && item.province.toLowerCase().includes(search));
 
-                // Gender match (flexible check)
                 const g = (item.gender || '').toLowerCase().trim();
                 const isMale = g.includes('laki') || g.includes('pria') || g.includes('male');
                 const matchGender = gender === "ALL" || 
                     (gender === "Laki-laki" && isMale) || 
                     (gender === "Perempuan" && !isMale);
 
-                // Wisudawan Attendance match
                 const itemAtt = (item.wisudawanAttendance || '').trim();
                 const matchAttendance = attendance === "ALL" || 
                     (attendance === "Hadir" && itemAtt.toLowerCase() === "hadir") ||
                     (attendance === "Tidak Hadir" && itemAtt.toLowerCase() !== "hadir");
 
-                // Wali Attendance match
                 const itemWaliAtt = (item.waliAttendance || '').trim();
                 const matchWaliAttendance = waliAttendance === "ALL" || 
                     (waliAttendance === "Hadir" && itemWaliAtt.toLowerCase() === "hadir") ||
@@ -992,7 +1221,6 @@ function doGet(e) {
             
             document.getElementById('mdlEmail').innerText = item.email || '-';
 
-            // Wali Details
             document.getElementById('mdlWali1Name').innerText = item.wali1Name || '-';
             document.getElementById('mdlWali1Relation').innerText = item.wali1Relation || '-';
             document.getElementById('mdlWali2Name').innerText = item.wali2Name || '-';
@@ -1001,7 +1229,6 @@ function doGet(e) {
             document.getElementById('modalDetail').classList.remove('hidden');
         };
 
-        // Robust JSONP Fallback to bypass iframe origin restriction
         function fetchWithJsonp(url, timeout = 8000) {
             return new Promise((resolve, reject) => {
                 const callbackName = 'gas_cb_' + Math.round(100000 * Math.random());
@@ -1054,7 +1281,6 @@ function doGet(e) {
             refreshIcon.classList.add('fa-spin');
 
             let cleanUrl = url.trim();
-            // Automatically normalize Google Web App URL
             if (cleanUrl.includes('script.google.com') && !cleanUrl.endsWith('/exec')) {
                 cleanUrl = cleanUrl.replace(/\/edit.*$/, '/exec').replace(/\/dev.*$/, '/exec');
                 if (!cleanUrl.endsWith('/exec')) {
@@ -1064,7 +1290,6 @@ function doGet(e) {
             }
 
             try {
-                // Method 1: Standard CORS fetch with redirect handling
                 const response = await fetch(cleanUrl, { 
                     method: 'GET', 
                     mode: 'cors',
@@ -1083,7 +1308,6 @@ function doGet(e) {
                     return;
                 }
             } catch (fetchErr) {
-                // Method 2: Fallback to JSONP without throwing unhandled console errors
                 try {
                     const jsonPData = await fetchWithJsonp(cleanUrl);
                     if (Array.isArray(jsonPData)) {
@@ -1153,80 +1377,30 @@ function doGet(e) {
             showToast("File CSV berhasil diunduh!", "success");
         }
 
+        // ====== BOOTSTRAP ======
         window.addEventListener('DOMContentLoaded', () => {
-            // Set URL tertanam ke input agar terlihat di UI
-            const urlInput = document.getElementById('gasUrlInput');
-            if (urlInput && !urlInput.value) {
-                urlInput.value = EMBEDDED_GAS_URL;
-            }
+            // Bind password form
+            document.getElementById('passwordForm').addEventListener('submit', handleLogin);
 
-            // Load Mock Data Initially sebagai fallback
-            rawData = generateMockData();
-            filteredData = [...rawData];
-            
-            document.getElementById('lastUpdatedText').innerText = `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
-            
-            applyFilters();
-
-            // ====== AUTO-CONNECT ke Google Sheets ======
-            // Tunggu sebentar agar UI render dulu, lalu fetch data live
-            setTimeout(() => {
-                fetchGasData(EMBEDDED_GAS_URL);
-            }, 400);
-
-            // Modal Alert close handler
-            document.getElementById('btnCloseAlert').addEventListener('click', () => {
-                document.getElementById('modalAlert').classList.add('hidden');
-            });
-
-            // Event Listeners for Filters
-            document.getElementById('searchInput').addEventListener('input', applyFilters);
-            document.getElementById('filterGender').addEventListener('change', applyFilters);
-            document.getElementById('filterAttendance').addEventListener('change', applyFilters);
-            document.getElementById('filterWaliAttendance').addEventListener('change', applyFilters);
-
-            // Connect GAS Button
-            document.getElementById('btnConnectGas').addEventListener('click', () => {
-                const url = document.getElementById('gasUrlInput').value.trim();
-                if (!url) {
-                    showToast("Masukkan URL Web App Google Script terlebih dahulu.", "warning");
-                    return;
+            // Toggle password visibility
+            document.getElementById('togglePassword').addEventListener('click', () => {
+                const inp = document.getElementById('passwordInput');
+                const icon = document.getElementById('toggleIcon');
+                if (inp.type === 'password') {
+                    inp.type = 'text';
+                    icon.className = 'fa-solid fa-eye-slash text-sm';
+                } else {
+                    inp.type = 'password';
+                    icon.className = 'fa-solid fa-eye text-sm';
                 }
-                fetchGasData(url);
             });
 
-            // Refresh Button
-            document.getElementById('btnRefresh').addEventListener('click', () => {
-                const url = document.getElementById('gasUrlInput').value.trim() || EMBEDDED_GAS_URL;
-                fetchGasData(url);
-            });
-
-            // Export Button
-            document.getElementById('btnExportCsv').addEventListener('click', exportToCsv);
-
-            // Detail Modal Close Handlers
-            const closeModal = () => document.getElementById('modalDetail').classList.add('hidden');
-            document.getElementById('btnCloseDetail').addEventListener('click', closeModal);
-            document.getElementById('btnCloseDetail2').addEventListener('click', closeModal);
-
-            // GAS Modal Handlers
-            const openGasModal = () => document.getElementById('modalGas').classList.remove('hidden');
-            const closeGasModal = () => document.getElementById('modalGas').classList.add('hidden');
-            document.getElementById('btnGasModal').addEventListener('click', openGasModal);
-            document.getElementById('btnCloseGas').addEventListener('click', closeGasModal);
-            document.getElementById('btnCloseGas2').addEventListener('click', closeGasModal);
-
-            // Copy Code Button
-            document.getElementById('btnCopyCode').addEventListener('click', () => {
-                const codeText = document.getElementById('gasCodeBlock').innerText;
-                const tempTextArea = document.createElement("textarea");
-                tempTextArea.value = codeText;
-                document.body.appendChild(tempTextArea);
-                tempTextArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempTextArea);
-                showToast("Kode Apps Script telah disalin ke clipboard!", "success");
-            });
+            // Cek apakah sudah login dalam sesi ini
+            if (isAuthenticated()) {
+                showDashboard();
+            } else {
+                showPasswordGate();
+            }
         });
     </script>
 </body>
